@@ -75,6 +75,11 @@
     margin-right: 8px;
     border-radius: 4px;
 }
+.commentLabel span{
+    font-size: 10px;
+    margin-left: 2ch;
+   color: #1f04049a;
+}
 
 .buttonTrash {
     border: 0;

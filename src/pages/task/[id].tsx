@@ -4,6 +4,7 @@ import styles from '@/styles/pages/task.module.css';
 import { Textarea } from "@/components/textarea";
 import * as IconsFa from 'react-icons/fa';
 import { toast } from "react-toastify";
+import { format } from 'date-fns';
 
 import { db } from "@/services/firebaseConnection";
 import {
@@ -27,6 +28,8 @@ interface TaskProps {
         public: boolean;
         tarefa: string;
         user: string;
+        hours: string;
+       
     };
     allComments: CommentsProps[]
 }
@@ -37,16 +40,22 @@ interface CommentsProps {
     taskId: string;
     user: string;
     name: string;
-    created: string;
+    hours: string;
 }
 
 export default function Task({ item, allComments }: TaskProps) {
     const { data: session } = useSession();
     const [input, setInput] = useState('');
+   
     const [comments, setComments] = useState<CommentsProps[]>(allComments || []);
-
+    
+    
+    
     async function handleComent(event: FormEvent) {
+        const NDate = new Date();
+        
         event.preventDefault();
+       
         if (input === '') {
             return toast.warn('O campo não pode estar vazio!')
         };
@@ -56,27 +65,32 @@ export default function Task({ item, allComments }: TaskProps) {
         };
 
         try {
-            const hours = new Date();
+           
             const docRef = await addDoc(collection(db, 'comments'), {
                 coment: input,
                 created: new Date(),
                 user: session?.user?.email,
                 name: session?.user?.name,
-                taskId: item?.taskId
+                taskId: item?.taskId, 
+                hours: format(NDate, 'dd/MM/yyyy') + ' ' + 'as' + ' ' + NDate.getHours().toString() + ':' + NDate.getMinutes().toString().padStart(2, '0'),
+              
             });
             const data = {
                 id: docRef.id,
                 coment: input,
-                created: hours.getHours() + ':' + hours.getMinutes(),
                 user: session?.user?.email,
                 name: session?.user?.name,
                 taskId: item?.taskId,
+                hours: format(NDate,'dd/MM/yyyy') +' ' +'as'+' '+NDate.getHours().toString() + ':' + NDate.getMinutes().toString().padStart(2, '0'), 
+
+                 
             };
             toast.success('Comentário inserido com sucesso!', { position: 'top-center' });
             setComments((oldItems) => [...oldItems, data]);
             setInput('')
         } catch (err) {
-            console.log(err)
+            console.log(err);
+            toast.error('Erro ao tentar deletar!')
         }
     }
     async function handleDeleteComment(id: string) {
@@ -140,7 +154,7 @@ export default function Task({ item, allComments }: TaskProps) {
                     <article key={index} className={styles.comment} >
                         <div className={styles.headComment}>
                             <label className={styles.commentLabel} >
-                                {item.name} as {item.created}
+                                {item.name } <br /> <span>{item.hours}</span>
                             </label>
                             {item.user === session?.user?.email && (
                                 <button className={styles.buttonTrash}
@@ -161,8 +175,9 @@ export default function Task({ item, allComments }: TaskProps) {
 export const getServerSideProps: GetServerSideProps = async ({ params }) => {
     const id = params?.id as string;
     const docRef = doc(db, 'tarefas', id);
-
-    const q = query(collection(db, 'comments'), where('taskId', '==', id))
+    const commentsRef= collection(db,'comments');
+ 
+    const q = query(collection(db,'comments'), where('taskId', '==', id))
     const snapshotComments = await getDocs(q);
 
     let allComments: CommentsProps[] = [];
@@ -174,6 +189,8 @@ export const getServerSideProps: GetServerSideProps = async ({ params }) => {
             user: doc.data().user,
             name: doc.data().name,
             taskId: doc.data().taskId,
+            hours: doc.data().hours,       
+
         })
     })
 
